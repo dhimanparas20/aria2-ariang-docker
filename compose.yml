@@ -1,0 +1,80 @@
+networks:
+  caddy:
+    driver: bridge
+
+services:
+  aria2-ui:
+    restart: unless-stopped
+    container_name: aria-mirror
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "80:80"
+      - "443:443"
+    networks:
+      - caddy
+    environment:
+      # User and permissions
+      - PUID=1000
+      - PGID=1000
+
+      # Authentication
+      - ENABLE_AUTH=true
+      - ARIA2_USER=mst
+      - ARIA2_PWD=1212
+      - RPC_SECRET=your_rpc_secret
+
+      # Aria2 settings
+      - ARIA2_EXTERNAL_PORT=443
+
+      # Domain and Caddyhello
+      - DOMAIN=https://go.mstservices.tech
+      - CADDY_LOG_LEVEL=WARN
+      # - CADDY_ACME_CA=https://acme-staging-v02.api.letsencrypt.org/directory
+
+      # FileBrowser
+      - ENABLE_FILEBROWSER=true
+
+      # Rclone
+      - ENABLE_RCLONE=false
+
+      #  - RCLONE_CONFIG_BASE64=...
+      - RCLONE_AUTO_UPLOAD_PROVIDER=gdrive # Only the first remote will be used! mega,putio
+      - RCLONE_AUTO_UPLOAD_REMOTE_PATH=/
+      - RCLONE_AUTO_UPLOAD_FILE_MIN_SIZE=10K
+      - RCLONE_AUTO_UPLOAD_FILE_MAX_SIZE=45G
+      - FIX_DATA_VOLUME_PERMISSIONS=true
+    volumes:
+      - ./data:/data
+      # - ./filebrowser.db:/app/filebrowser.db
+      - ./cache:/app/.cache
+      # - ./configs/rclone.conf:/app/conf/rclone.conf
+#      - ./configs/aria2.conf:/app/conf/aria2.conf  #This cuases gdrive upload to not work
+
+  plex:
+    image: spritsail/plex-media-server
+    container_name: plex
+    volumes:
+      - ./data:/media:rw # The media folder
+      - ./transcode:/transcode # Transcoder temporary directory
+      - ./config:/config # Configurations
+    environment:
+      - LOG_DEBUG=0
+      - LOG_VERBOSE=0
+      - PLEX_CLAIM=claim-1XPdRZ3pis6EV47xzs4c
+    restart: unless-stopped
+    hostname: "mst-plex-server" # change the name to whatever you like
+    networks:
+      - caddy
+    ports:
+      - "32400:32400"
+#      - "5000:32400" # The web port
+      - "3005:3005" # The following ports are optional
+      - "8324:8324"
+      - "32469:32469"
+      - "1900:1900"
+      - "32410:32410"
+      - "32412:32412"
+      - "32413:32413"
+      - "32414:32414"
